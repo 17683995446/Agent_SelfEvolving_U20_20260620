@@ -40,6 +40,10 @@ class EnvironmentPerception(IEnvironmentPerception):
     多通道独立采集，统一标准化编码，支持动态注册新传感器。
     """
 
+    # Bug35修复：感知数据缓存阈值（秒），避免每周期重复采样慢传感器
+    # CPU/内存/磁盘/网络/进程数据变化较慢，0.5秒内复用缓存
+    _CACHE_TTL_SECONDS = 0.5
+
     def __init__(self) -> None:
         self._sensors: List[ISensor] = []
         self._normalizer = StateNormalizer(FEATURE_DIMENSIONS_DEFAULT)
@@ -49,6 +53,9 @@ class EnvironmentPerception(IEnvironmentPerception):
         self._logger = get_logger()
         self._robust_filter = RobustFilter()
         self._adversarial_defender = AdversarialDefender()
+        # Bug35修复：感知数据缓存，避免高频周期重复采样
+        self._sensor_cache: Dict[str, Any] = {}
+        self._cache_timestamp: float = 0.0
 
     @property
     def version(self) -> str:
@@ -116,6 +123,16 @@ class EnvironmentPerception(IEnvironmentPerception):
         return state
 
     async def _read_all_sensors(self) -> Dict[str, Any]:
+        # Bug35修复：缓存感知数据，TTL内复用，避免高频周期重复采样
+        now = time.time()
+        cache_age = now - self._cache_timestamp
+        if cache_age < self._CACHE_TTL_SECONDS and self._sensor_cache:
+            self._logger.debug(
+                f"[EnvironmentPerception] Using cached sensor data "
+                f"(age={cache_age:.3f}s)"
+            )
+            return dict(self._sensor_cache)
+
         tasks = [sensor.read() for sensor in self._sensors]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         raw_sensors: Dict[str, Any] = {}
@@ -128,6 +145,9 @@ class EnvironmentPerception(IEnvironmentPerception):
                 )
             else:
                 raw_sensors[sensor.sensor_type] = result
+        # 更新缓存
+        self._sensor_cache = dict(raw_sensors)
+        self._cache_timestamp = now
         return raw_sensors
 
     def _create_state(
@@ -182,5 +202,8 @@ class EnvironmentPerception(IEnvironmentPerception):
         """
         self._sensors.clear()
         self._state_history.clear()
+        # Bug35修复：清理缓存
+        self._sensor_cache.clear()
+        self._cache_timestamp = 0.0
         self._initialized = False
         self._logger.info("[EnvironmentPerception] Shutdown")

@@ -57,14 +57,18 @@ class CPUSensor(ISensor):
     async def read(self) -> Dict[str, Any]:
         # Bug20修复：psutil.cpu_percent(interval>0)是阻塞调用，
         # 必须用asyncio.to_thread包装，避免阻塞事件循环
-        cpu_percent = await asyncio.to_thread(
+        # Bug31修复：3次独立psutil调用串行执行浪费时间，改为并行
+        cpu_percent_task = asyncio.to_thread(
             psutil.cpu_percent, interval=self._interval_seconds
         )
-        cpu_frequency = await asyncio.to_thread(psutil.cpu_freq)
+        cpu_frequency_task = asyncio.to_thread(psutil.cpu_freq)
+        per_cpu_task = asyncio.to_thread(psutil.cpu_percent, percpu=True)
+        cpu_percent, cpu_frequency, per_cpu = await asyncio.gather(
+            cpu_percent_task, cpu_frequency_task, per_cpu_task
+        )
         load_average = (
             os.getloadavg() if hasattr(os, "getloadavg") else (0.0, 0.0, 0.0)
         )
-        per_cpu = await asyncio.to_thread(psutil.cpu_percent, percpu=True)
         return {
             "percent": cpu_percent,
             "frequency": cpu_frequency.current if cpu_frequency else 0,
@@ -86,8 +90,10 @@ class MemorySensor(ISensor):
         return "memory"
 
     async def read(self) -> Dict[str, Any]:
-        virtual_memory = psutil.virtual_memory()
-        swap_memory = psutil.swap_memory()
+        # Bug30修复：psutil调用是同步阻塞，用asyncio.to_thread包装
+        virtual_memory, swap_memory = await asyncio.to_thread(
+            self._read_memory_sync
+        )
         return {
             "total": virtual_memory.total,
             "available": virtual_memory.available,
@@ -98,6 +104,10 @@ class MemorySensor(ISensor):
             "swap_used": swap_memory.used,
             "swap_percent": swap_memory.percent,
         }
+
+    @staticmethod
+    def _read_memory_sync():
+        return psutil.virtual_memory(), psutil.swap_memory()
 
 
 class DiskSensor(ISensor):
@@ -113,6 +123,11 @@ class DiskSensor(ISensor):
         return "disk"
 
     async def read(self) -> Dict[str, Any]:
+        # Bug30修复：psutil.disk_usage是同步阻塞，用asyncio.to_thread包装
+        partitions = await asyncio.to_thread(self._read_disk_sync)
+        return {"partitions": partitions}
+
+    def _read_disk_sync(self) -> List[Dict[str, Any]]:
         partitions = []
         for path in self._paths:
             if not os.path.exists(path):
@@ -125,7 +140,7 @@ class DiskSensor(ISensor):
                 "free": usage.free,
                 "percent": usage.percent,
             })
-        return {"partitions": partitions}
+        return partitions
 
 
 class NetworkSensor(ISensor):
@@ -138,7 +153,8 @@ class NetworkSensor(ISensor):
         return "network"
 
     async def read(self) -> Dict[str, Any]:
-        counters = psutil.net_io_counters()
+        # Bug30修复：psutil.net_io_counters是同步阻塞，用asyncio.to_thread包装
+        counters = await asyncio.to_thread(psutil.net_io_counters)
         return {
             "bytes_sent": counters.bytes_sent,
             "bytes_recv": counters.bytes_recv,
@@ -168,6 +184,15 @@ class LogSensor(ISensor):
         return "log"
 
     async def read(self) -> Dict[str, Any]:
+        # Bug33修复：文件IO是同步阻塞，用asyncio.to_thread包装
+        error_count, warning_count = await asyncio.to_thread(self._read_logs_sync)
+        return {
+            "error_count": error_count,
+            "warning_count": warning_count,
+            "total_issues": error_count + warning_count,
+        }
+
+    def _read_logs_sync(self) -> tuple:
         error_count = 0
         warning_count = 0
         for path in self._log_paths:
@@ -179,11 +204,7 @@ class LogSensor(ISensor):
                 warning_count += sum(1 for line in lines if "WARNING" in line.upper())
             except Exception:
                 continue
-        return {
-            "error_count": error_count,
-            "warning_count": warning_count,
-            "total_issues": error_count + warning_count,
-        }
+        return error_count, warning_count
 
     def _read_new_lines(self, path: str) -> List[str]:
         last_position = self._file_positions.get(path, 0)
