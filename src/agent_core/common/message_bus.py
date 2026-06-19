@@ -12,6 +12,7 @@
 import asyncio
 import json
 import sqlite3
+import threading
 import time
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -39,13 +40,21 @@ class MessageBus:
         self._running = False
         self._logger = get_logger()
         self._db_path = "message_bus.db"
+        # Bug36修复：_subscribers并发读写需要锁保护
+        self._subscribers_lock = threading.RLock()
+        # Bug37修复：复用SQLite连接，避免每次操作新建/关闭导致并发锁冲突
+        self._db_lock = threading.Lock()
+        self._db_conn: sqlite3.Connection = None
         self._init_db()
 
     def _init_db(self) -> None:
-        conn = sqlite3.connect(self._db_path, timeout=5.0)
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA busy_timeout=5000")
-        conn.execute(
+        # Bug37修复：使用持久连接，WAL模式 + busy_timeout
+        self._db_conn = sqlite3.connect(
+            self._db_path, timeout=5.0, check_same_thread=False
+        )
+        self._db_conn.execute("PRAGMA journal_mode=WAL")
+        self._db_conn.execute("PRAGMA busy_timeout=5000")
+        self._db_conn.execute(
             "CREATE TABLE IF NOT EXISTS messages ("
             "id INTEGER PRIMARY KEY AUTOINCREMENT,"
             "topic TEXT NOT NULL,"
@@ -54,14 +63,15 @@ class MessageBus:
             "delivered INTEGER DEFAULT 0"
             ")"
         )
-        conn.commit()
-        conn.close()
+        self._db_conn.commit()
 
     def subscribe(self, topic: str, callback: Callable[[Any], None]) -> None:
         """订阅主题。"""
-        if topic not in self._subscribers:
-            self._subscribers[topic] = []
-        self._subscribers[topic].append(callback)
+        # Bug36修复：用锁保护_subscribers写操作
+        with self._subscribers_lock:
+            if topic not in self._subscribers:
+                self._subscribers[topic] = []
+            self._subscribers[topic].append(callback)
         self._logger.debug(f"[MessageBus] Subscribed to {topic}")
 
     def publish(self, topic: str, message: Any) -> None:
@@ -72,7 +82,9 @@ class MessageBus:
 
     def _dispatch_sync(self, topic: str, message: Any) -> None:
         """同步分发消息给订阅者。"""
-        callbacks = self._subscribers.get(topic, [])
+        # Bug36修复：用锁保护_subscribers读操作，复制列表避免迭代时修改
+        with self._subscribers_lock:
+            callbacks = list(self._subscribers.get(topic, []))
         for callback in callbacks:
             try:
                 callback(message)
@@ -85,16 +97,15 @@ class MessageBus:
         """持久化消息，返回消息 ID。"""
         try:
             payload = json.dumps(message, default=str)
-            conn = sqlite3.connect(self._db_path, timeout=5.0)
-            conn.execute("PRAGMA busy_timeout=5000")
-            cursor = conn.execute(
-                "INSERT INTO messages (topic, payload, created_at) "
-                "VALUES (?, ?, ?)",
-                (topic, payload, time.time()),
-            )
-            conn.commit()
-            msg_id = cursor.lastrowid
-            conn.close()
+            # Bug37修复：用锁保护数据库写入，复用连接
+            with self._db_lock:
+                cursor = self._db_conn.execute(
+                    "INSERT INTO messages (topic, payload, created_at) "
+                    "VALUES (?, ?, ?)",
+                    (topic, payload, time.time()),
+                )
+                self._db_conn.commit()
+                msg_id = cursor.lastrowid
             return msg_id
         except Exception as exc:
             self._logger.error(f"[MessageBus] Persist failed: {exc}")
@@ -122,8 +133,9 @@ class MessageBus:
 
     def _load_pending(self) -> List[Tuple[int, str, Any]]:
         try:
-            with sqlite3.connect(self._db_path) as conn:
-                rows = conn.execute(
+            # Bug37修复：用锁保护数据库读取
+            with self._db_lock:
+                rows = self._db_conn.execute(
                     "SELECT id, topic, payload FROM messages ORDER BY id"
                 ).fetchall()
             return [(r[0], r[1], json.loads(r[2])) for r in rows]
@@ -132,7 +144,9 @@ class MessageBus:
             return []
 
     async def _dispatch(self, topic: str, message: Any) -> None:
-        callbacks = self._subscribers.get(topic, [])
+        # Bug36修复：用锁保护_subscribers读操作，复制列表避免迭代时修改
+        with self._subscribers_lock:
+            callbacks = list(self._subscribers.get(topic, []))
         for callback in callbacks:
             try:
                 callback(message)
@@ -144,19 +158,25 @@ class MessageBus:
         if msg_id < 0:
             return
         try:
-            conn = sqlite3.connect(self._db_path, timeout=5.0)
-            conn.execute("PRAGMA busy_timeout=5000")
-            conn.execute(
-                "DELETE FROM messages WHERE id = ?", (msg_id,)
-            )
-            conn.commit()
-            conn.close()
+            # Bug37修复：用锁保护数据库删除，复用连接
+            with self._db_lock:
+                self._db_conn.execute(
+                    "DELETE FROM messages WHERE id = ?", (msg_id,)
+                )
+                self._db_conn.commit()
         except Exception as exc:
             self._logger.error(f"[MessageBus] Ack failed: {exc}")
 
     async def stop(self) -> None:
         """停止消息总线。"""
         self._running = False
+        # Bug37修复：关闭持久连接
+        if self._db_conn is not None:
+            try:
+                self._db_conn.close()
+            except Exception:
+                pass
+            self._db_conn = None
         self._logger.info("[MessageBus] Stopped")
 
 

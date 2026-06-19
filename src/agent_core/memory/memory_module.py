@@ -4,6 +4,7 @@
 经验存储与离线复盘，支持优先级采样。
 """
 
+import asyncio
 from typing import Any, Dict, List
 
 import numpy as np
@@ -41,6 +42,8 @@ class MemorySystem(IMemorySystem):
         self._logger = get_logger()
         self._pending_experiences: List[Experience] = []
         self._id_to_index: Dict[int, int] = {}
+        # Bug39修复：asyncio.Lock保护并发异步操作（在线store与离线review并发）
+        self._lock: asyncio.Lock = asyncio.Lock()
 
     @property
     def version(self) -> str:
@@ -68,21 +71,23 @@ class MemorySystem(IMemorySystem):
         if not self._initialized:
             self._logger.warning("[MemorySystem] Not initialized, skip store")
             return
-        priority = self._compute_priority(experience)
-        self._insert_experience(experience, priority)
-        self._pending_experiences.append(experience)
-        # Bug27修复：限制待持久化队列上限，持续失败时丢弃最旧经验避免OOM
-        if len(self._pending_experiences) > _MAX_PENDING_EXPERIENCES:
-            overflow = len(self._pending_experiences) - _MAX_PENDING_EXPERIENCES
-            del self._pending_experiences[:overflow]
-            self._logger.warning(
-                f"[MemorySystem] Pending overflow, dropped {overflow} old experiences"
+        # Bug39修复：用asyncio.Lock保护，避免在线store与离线review并发修改_experiences
+        async with self._lock:
+            priority = self._compute_priority(experience)
+            self._insert_experience(experience, priority)
+            self._pending_experiences.append(experience)
+            # Bug27修复：限制待持久化队列上限，持续失败时丢弃最旧经验避免OOM
+            if len(self._pending_experiences) > _MAX_PENDING_EXPERIENCES:
+                overflow = len(self._pending_experiences) - _MAX_PENDING_EXPERIENCES
+                del self._pending_experiences[:overflow]
+                self._logger.warning(
+                    f"[MemorySystem] Pending overflow, dropped {overflow} old experiences"
+                )
+            if len(self._pending_experiences) >= _BATCH_FLUSH_SIZE:
+                await self._flush_pending()
+            self._logger.debug(
+                f"[MemorySystem] Stored experience, count={len(self._experiences)}"
             )
-        if len(self._pending_experiences) >= _BATCH_FLUSH_SIZE:
-            await self._flush_pending()
-        self._logger.debug(
-            f"[MemorySystem] Stored experience, count={len(self._experiences)}"
-        )
 
     async def _flush_pending(self) -> None:
         """批量写入待持久化经验，失败时保留数据。"""
@@ -135,12 +140,16 @@ class MemorySystem(IMemorySystem):
         """采样经验。"""
         if not self._initialized or not self._experiences:
             return []
-        n = min(sample_size, len(self._experiences))
-        probs = self._compute_probs()
-        indices = np.random.choice(
-            len(self._experiences), size=n, replace=False, p=probs
-        )
-        return [self._experiences[i] for i in indices]
+        # Bug39修复：用asyncio.Lock保护，避免采样时_experiences被并发修改
+        async with self._lock:
+            if not self._experiences:
+                return []
+            n = min(sample_size, len(self._experiences))
+            probs = self._compute_probs()
+            indices = np.random.choice(
+                len(self._experiences), size=n, replace=False, p=probs
+            )
+            return [self._experiences[i] for i in indices]
 
     def _compute_probs(self) -> np.ndarray:
         valid = self._priorities[: len(self._experiences)]
@@ -155,18 +164,29 @@ class MemorySystem(IMemorySystem):
 
     async def offline_review(self, predictor: IMultiLayerPredictor) -> None:
         """离线复盘。"""
-        if not self._experiences:
-            self._logger.debug("[MemorySystem] No experiences to review")
-            return
-        batch = await self._sample_batch()
-        self._logger.info(f"[MemorySystem] Reviewing {len(batch)} experiences")
-        self._train_predictor(predictor, batch)
-        self._decay_priorities(batch)
-        self._logger.info("[MemorySystem] Offline review completed")
+        # Bug39修复：用asyncio.Lock保护，避免与在线store并发修改_experiences/_priorities
+        async with self._lock:
+            if not self._experiences:
+                self._logger.debug("[MemorySystem] No experiences to review")
+                return
+            # 直接内部采样，避免再次获取锁（asyncio.Lock不可重入）
+            batch = self._sample_batch_sync()
+            self._logger.info(f"[MemorySystem] Reviewing {len(batch)} experiences")
+            self._train_predictor(predictor, batch)
+            self._decay_priorities(batch)
+            self._logger.info("[MemorySystem] Offline review completed")
 
-    async def _sample_batch(self) -> List[Experience]:
+    def _sample_batch_sync(self) -> List[Experience]:
+        """同步采样批量经验（调用方已持锁）。"""
+        if not self._experiences:
+            return []
         batch_size = min(_BATCH_SIZE_MAX, len(self._experiences))
-        return await self.sample_experiences(sample_size=batch_size)
+        n = min(batch_size, len(self._experiences))
+        probs = self._compute_probs()
+        indices = np.random.choice(
+            len(self._experiences), size=n, replace=False, p=probs
+        )
+        return [self._experiences[i] for i in indices]
 
     def _train_predictor(
         self, predictor: IMultiLayerPredictor, batch: List[Experience]
@@ -202,10 +222,12 @@ class MemorySystem(IMemorySystem):
 
     async def shutdown(self) -> None:
         """优雅关闭，仅 flush 未持久化的经验。"""
-        self._initialized = False
-        await self._flush_pending()
-        self._experiences.clear()
-        self._priorities = np.zeros(0, dtype=np.float32)
-        self._pending_experiences.clear()
+        # Bug39修复：用asyncio.Lock保护，避免与并发store/review冲突
+        async with self._lock:
+            self._initialized = False
+            await self._flush_pending()
+            self._experiences.clear()
+            self._priorities = np.zeros(0, dtype=np.float32)
+            self._pending_experiences.clear()
         self._id_to_index.clear()
         self._logger.info("[MemorySystem] Shutdown")
