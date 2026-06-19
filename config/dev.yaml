@@ -1,0 +1,30 @@
+app_name: "self_evolving_agent"
+app_version: "1.0.0"
+log_level: "DEBUG"
+online_interval_seconds: 1.0
+offline_interval_seconds: 3600.0
+memory_capacity: 10000
+exploration_rate: 0.3
+epsilon: 0.2
+interrupt_threshold: 0.7
+feature_dimensions: 10
+low_alpha_init: 0.3
+low_alpha_min: 0.05
+low_alpha_max: 0.8
+low_adaptation_rate: 0.1
+mid_window_size: 20
+mid_forecast_horizon: 5
+high_window_size: 100
+high_reversion_strength: 0.3
+ensemble_beta: 5.0
+cpu_interval_seconds: 1.0
+disk_paths:
+  - "/"
+log_paths: []
+max_log_lines: 100
+base_weights:
+  safety: 0.4
+  gain: 0.4
+  efficiency: 0.2
+query_page_size: 20
+batch_query_limit: 1000

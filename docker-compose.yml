@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: self_evolving_agent:1.0.0
+    container_name: self_evolving_agent
+    environment:
+      - AGENT_CONFIG_PATH=/app/config/prod.yaml
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
