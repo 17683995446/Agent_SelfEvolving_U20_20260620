@@ -382,6 +382,13 @@ async def _cmd_init(args: argparse.Namespace) -> int:
     return 0 if success else 1
 
 
+async def _cmd_logs(args: argparse.Namespace) -> int:
+    """日志查看/过滤/分析。"""
+    from agent_core.logs_cli import handle_logs
+
+    return handle_logs(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -399,6 +406,12 @@ def _build_parser() -> argparse.ArgumentParser:
   agent health                      # 健康检查
   agent shell                       # 交互式Shell
   agent version                     # 显示版本
+  agent logs show                   # 查看最近日志
+  agent logs show -n 100            # 查看最近100行
+  agent logs show --level ERROR     # 只看ERROR级别
+  agent logs analyze                # 智能分析日志
+  agent logs grep "error" -i        # 搜索关键词（忽略大小写）
+  agent logs tail                   # 实时跟踪日志
 """,
     )
 
@@ -501,6 +514,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="跳过交互式确认"
     )
 
+    # logs 子命令组（U-6）
+    from agent_core.logs_cli import add_logs_subparser
+    add_logs_subparser(subparsers)
+
     return parser
 
 
@@ -530,6 +547,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "version": _cmd_version,
         "shell": _cmd_shell,
         "init": _cmd_init,
+        "logs": _cmd_logs,
     }
 
     handler = handlers.get(args.command)

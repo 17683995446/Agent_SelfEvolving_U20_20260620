@@ -289,6 +289,43 @@ class AgentShell(cmd.Cmd):
         for i, cmd_line in enumerate(self._history, 1):
             print(f"  {i:3d}  {cmd_line}")
 
+    # === 日志命令（U-6）===
+
+    def do_logs(self, arg: str) -> None:
+        """
+        日志查看/过滤/分析。
+
+        用法:
+          logs                       # 显示最近日志（默认50行）
+          logs show                  # 显示日志
+          logs show -n 100           # 显示最后100行
+          logs show --level ERROR    # 只显示ERROR级别
+          logs analyze               # 智能分析日志
+          logs grep <pattern>        # 搜索关键词
+          logs grep <pattern> -i     # 忽略大小写搜索
+          logs tail                  # 实时跟踪日志
+
+        选项:
+          -f, --file <path>    指定日志文件路径
+          -n, --lines <N>      显示行数（默认50）
+          --level <LEVEL>      按级别过滤
+          -C, --context <N>    上下文行数（grep）
+          -i, --ignore-case    忽略大小写（grep）
+        """
+        from agent_core.logs_cli import handle_logs
+        from agent_core.cli import _build_parser
+
+        # 复用CLI解析器处理参数
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["logs"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_logs(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -323,6 +360,9 @@ class AgentShell(cmd.Cmd):
             print()
             print(_c("Config:", _COLOR_CYAN))
             print("  config    - View/modify configuration")
+            print()
+            print(_c("Logs:", _COLOR_CYAN))
+            print("  logs      - View/analyze/search logs")
             print()
             print(_c("System:", _COLOR_CYAN))
             print("  port      - Set dashboard port")
