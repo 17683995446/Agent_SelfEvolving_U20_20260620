@@ -203,6 +203,19 @@ COMMAND_METADATA: Dict[str, Dict[str, Any]] = {
             "agent overview --env prod       # 指定环境",
         ],
     },
+    "history": {
+        "category": "System",
+        "summary": "命令历史管理",
+        "description": "管理命令历史，支持持久化、搜索和统计。历史跨会话保留。",
+        "examples": [
+            "agent history                   # 列出最近历史",
+            "agent history list -n 50        # 列出最近50条",
+            "agent history search start      # 搜索含start的命令",
+            "agent history search log --regex # 正则搜索",
+            "agent history stats             # 历史统计",
+            "agent history clear             # 清除历史",
+        ],
+    },
 }
 
 # 分类显示顺序

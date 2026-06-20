@@ -508,6 +508,13 @@ async def _cmd_overview(args: argparse.Namespace) -> int:
     return handle_overview(args)
 
 
+async def _cmd_history(args: argparse.Namespace) -> int:
+    """命令历史管理。"""
+    from agent_core.history_cli import handle_history
+
+    return handle_history(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -702,6 +709,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.overview_cli import add_overview_subparser
     add_overview_subparser(subparsers)
 
+    # history 子命令（U-16）
+    from agent_core.history_cli import add_history_subparser
+    add_history_subparser(subparsers)
+
     return parser
 
 
@@ -724,7 +735,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         known_commands = {
             "start", "status", "health", "dashboard", "version", "shell",
             "init", "logs", "plugin", "log-rotate", "config", "data",
-            "help", "wizard", "alias", "overview", "--help", "-h",
+            "help", "wizard", "alias", "overview", "history",
+            "--help", "-h",
         }
         if argv[0] not in known_commands:
             manager = AliasManager()
@@ -757,6 +769,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "wizard": _cmd_wizard,
         "alias": _cmd_alias,
         "overview": _cmd_overview,
+        "history": _cmd_history,
     }
 
     handler = handlers.get(args.command)
@@ -765,14 +778,27 @@ def main(argv: Optional[List[str]] = None) -> int:
         from agent_core.help_cli import handle_unknown_command
         return handle_unknown_command(args.command, list(handlers.keys()))
 
+    # 构造命令字符串用于历史记录（U-16）
+    cmd_str = " ".join(argv) if argv else args.command
+
     try:
-        return asyncio.run(handler(args))
+        exit_code = asyncio.run(handler(args))
     except KeyboardInterrupt:
         _print_info("\nInterrupted")
-        return 130
+        exit_code = 130
     except Exception as exc:
         _print_error(f"Unexpected error: {exc}")
-        return 1
+        exit_code = 1
+
+    # 记录到历史（U-16）
+    try:
+        from agent_core.history_cli import HistoryManager
+        history = HistoryManager()
+        history.record(cmd_str, exit_code=exit_code)
+    except Exception:
+        pass  # 历史记录失败不影响主流程
+
+    return exit_code
 
 
 if __name__ == "__main__":
