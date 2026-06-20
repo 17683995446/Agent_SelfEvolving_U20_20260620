@@ -464,6 +464,28 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    def do_wizard(self, arg: str) -> None:
+        """
+        交互式配置向导（U-12）。
+
+        用法:
+          wizard                    # 交互式向导
+          wizard --yes              # 非交互模式（全部默认值）
+          wizard <directory>        # 指定项目目录
+        """
+        from agent_core.wizard_cli import handle_wizard
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["wizard"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_wizard(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -510,6 +532,7 @@ class AgentShell(cmd.Cmd):
             print()
             print(_c("Config:", _COLOR_CYAN))
             print("  config-diff - Compare/show/validate config")
+            print("  wizard    - Interactive onboarding wizard")
             print()
             print(_c("Data:", _COLOR_CYAN))
             print("  data      - Export/import/stats data")

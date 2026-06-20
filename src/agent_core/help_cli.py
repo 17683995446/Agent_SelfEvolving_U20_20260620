@@ -172,6 +172,16 @@ COMMAND_METADATA: Dict[str, Dict[str, Any]] = {
             "agent help logs                 # 显示logs命令详情",
         ],
     },
+    "wizard": {
+        "category": "Configuration",
+        "summary": "交互式配置向导",
+        "description": "交互式向导引导生成配置文件，适合首次使用。支持非交互模式。",
+        "examples": [
+            "agent wizard                    # 交互式向导",
+            "agent wizard myproject          # 指定项目目录",
+            "agent wizard --yes              # 非交互模式（全部默认值）",
+        ],
+    },
 }
 
 # 分类显示顺序

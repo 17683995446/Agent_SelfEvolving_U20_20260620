@@ -487,6 +487,13 @@ async def _cmd_help(args: argparse.Namespace) -> int:
     return cmd_help(args)
 
 
+async def _cmd_wizard(args: argparse.Namespace) -> int:
+    """交互式配置向导。"""
+    from agent_core.wizard_cli import handle_wizard
+
+    return handle_wizard(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -655,6 +662,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.help_cli import add_help_subparser
     add_help_subparser(subparsers)
 
+    # wizard 子命令（U-12）
+    from agent_core.wizard_cli import add_wizard_subparser
+    add_wizard_subparser(subparsers)
+
     return parser
 
 
@@ -692,6 +703,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "config": _cmd_config,
         "data": _cmd_data,
         "help": _cmd_help,
+        "wizard": _cmd_wizard,
     }
 
     handler = handlers.get(args.command)
