@@ -182,6 +182,17 @@ COMMAND_METADATA: Dict[str, Dict[str, Any]] = {
             "agent wizard --yes              # 非交互模式（全部默认值）",
         ],
     },
+    "alias": {
+        "category": "System",
+        "summary": "命令别名管理",
+        "description": "管理命令别名，支持内置别名和用户自定义别名。别名让高频命令更短。",
+        "examples": [
+            "agent alias list                # 列出所有别名",
+            "agent alias add go start        # 添加别名 go→start",
+            "agent alias remove go           # 删除别名",
+            "agent alias clear               # 清除所有用户别名",
+        ],
+    },
 }
 
 # 分类显示顺序

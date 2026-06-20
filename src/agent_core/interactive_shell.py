@@ -486,6 +486,30 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    def do_alias(self, arg: str) -> None:
+        """
+        命令别名管理（U-13）。
+
+        用法:
+          alias                    # 列出所有别名
+          alias list               # 列出所有别名
+          alias add <name> <cmd>   # 添加别名
+          alias remove <name>      # 删除别名
+          alias clear              # 清除所有用户别名
+        """
+        from agent_core.alias_cli import handle_alias
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["alias"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_alias(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -540,6 +564,7 @@ class AgentShell(cmd.Cmd):
             print(_c("System:", _COLOR_CYAN))
             print("  port      - Set dashboard port")
             print("  history   - Show command history")
+            print("  alias     - Manage command aliases")
             print("  exit      - Quit shell")
             print()
             print(_c("Type 'help <command>' for detailed help.", _COLOR_YELLOW))

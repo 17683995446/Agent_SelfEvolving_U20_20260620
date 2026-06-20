@@ -494,6 +494,13 @@ async def _cmd_wizard(args: argparse.Namespace) -> int:
     return handle_wizard(args)
 
 
+async def _cmd_alias(args: argparse.Namespace) -> int:
+    """命令别名管理。"""
+    from agent_core.alias_cli import handle_alias
+
+    return handle_alias(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -666,6 +673,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.wizard_cli import add_wizard_subparser
     add_wizard_subparser(subparsers)
 
+    # alias 子命令（U-13）
+    from agent_core.alias_cli import add_alias_subparser
+    add_alias_subparser(subparsers)
+
     return parser
 
 
@@ -679,6 +690,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     Returns:
         退出码（0成功，非0失败）。
     """
+    # 别名解析（U-13）：在argparse解析前替换命令名
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv:
+        from agent_core.alias_cli import resolve_command_args, AliasManager
+        # 仅当第一个token不是已知命令时尝试别名解析
+        known_commands = {
+            "start", "status", "health", "dashboard", "version", "shell",
+            "init", "logs", "plugin", "log-rotate", "config", "data",
+            "help", "wizard", "alias", "--help", "-h",
+        }
+        if argv[0] not in known_commands:
+            manager = AliasManager()
+            argv = resolve_command_args(argv, manager)
+
     parser = _build_parser()
     args = parser.parse_args(argv)
 
@@ -704,6 +730,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "data": _cmd_data,
         "help": _cmd_help,
         "wizard": _cmd_wizard,
+        "alias": _cmd_alias,
     }
 
     handler = handlers.get(args.command)
