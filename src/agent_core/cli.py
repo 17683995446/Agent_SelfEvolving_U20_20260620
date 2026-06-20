@@ -77,7 +77,7 @@ def _load_config(env: str, config_path: Optional[str]) -> Dict[str, Any]:
     """
     加载配置。
 
-    优先级：config_path > env配置 > 默认值
+    优先级：config_path > env配置 > base配置 > 默认值
 
     Args:
         env: 环境名（dev/prod/test）。
@@ -86,10 +86,12 @@ def _load_config(env: str, config_path: Optional[str]) -> Dict[str, Any]:
     Returns:
         配置字典。
     """
-    # 尝试加载YAML配置
+    from agent_core.common.config_validator import ConfigValidator
+
     config: Dict[str, Any] = {}
 
     if config_path and os.path.exists(config_path):
+        # 显式配置文件优先
         try:
             import yaml
             with open(config_path, "r", encoding="utf-8") as f:
@@ -100,26 +102,39 @@ def _load_config(env: str, config_path: Optional[str]) -> Dict[str, Any]:
         except OSError as exc:
             _print_error(f"Failed to load config: {exc}")
     else:
-        # 尝试从config目录加载
+        # 使用EnvironmentConfig加载base + env配置
         config_dir = os.environ.get(
             "AGENT_CONFIG_DIR",
             os.path.join(os.getcwd(), "config"),
         )
-        env_path = os.path.join(config_dir, f"{env}.yaml")
-        if os.path.exists(env_path):
-            try:
-                import yaml
-                with open(env_path, "r", encoding="utf-8") as f:
-                    config = yaml.safe_load(f) or {}
-                _print_info(f"Loaded {env} config from {env_path}")
-            except (ImportError, OSError):
-                pass
+        try:
+            from agent_core.common.environment_config import EnvironmentConfig
+            env_config = EnvironmentConfig(config_dir=config_dir)
+            # 强制使用指定环境
+            if env != env_config.environment:
+                # 重新加载指定环境
+                os.environ["AGENT_ENV"] = env
+                env_config = EnvironmentConfig(config_dir=config_dir)
+            config = env_config.all_config
+            if config:
+                _print_info(f"Loaded {env} config from {config_dir}")
+        except Exception as exc:
+            _print_warning(f"EnvironmentConfig load failed: {exc}, using defaults")
 
     # 填充默认值（零配置可启动）
     defaults = _get_default_config()
     for key, value in defaults.items():
         if key not in config:
             config[key] = value
+
+    # 校验配置
+    validator = ConfigValidator()
+    ok, errors = validator.validate(config)
+    if not ok:
+        _print_error("Configuration validation failed:")
+        for err in errors:
+            _print_error(f"  {err}")
+        _print_error("Fix the above errors or use --config to specify a valid config file")
 
     return config
 
