@@ -432,6 +432,38 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    # === 数据命令（U-10）===
+
+    def do_data(self, arg: str) -> None:
+        """
+        数据管理（导出/导入/统计）。
+
+        用法:
+          data                              # 显示数据统计
+          data stats                        # 显示数据统计
+          data export -o <file>             # 导出经验数据为JSON
+          data import <file>                # 导入经验数据
+          data import <file> --merge        # 合并导入（不清空）
+
+        选项:
+          -o, --output <path>   输出文件路径（export）
+          --db <path>           数据库路径
+          --limit <N>           导出条数限制（export）
+          --merge               合并模式（import）
+        """
+        from agent_core.data_cli import handle_data
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["data"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_data(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -478,6 +510,9 @@ class AgentShell(cmd.Cmd):
             print()
             print(_c("Config:", _COLOR_CYAN))
             print("  config-diff - Compare/show/validate config")
+            print()
+            print(_c("Data:", _COLOR_CYAN))
+            print("  data      - Export/import/stats data")
             print()
             print(_c("System:", _COLOR_CYAN))
             print("  port      - Set dashboard port")

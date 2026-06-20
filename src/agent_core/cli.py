@@ -473,6 +473,13 @@ async def _cmd_config(args: argparse.Namespace) -> int:
     return handle_config(args)
 
 
+async def _cmd_data(args: argparse.Namespace) -> int:
+    """数据管理。"""
+    from agent_core.data_cli import handle_data
+
+    return handle_data(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -508,6 +515,9 @@ def _build_parser() -> argparse.ArgumentParser:
   agent config show                   # 显示生效配置
   agent config validate               # 验证配置
   agent start --dry-run               # 验证配置但不启动
+  agent data export                   # 导出经验数据为JSON
+  agent data import <file>            # 导入经验数据
+  agent data stats                    # 显示数据统计
 """,
     )
 
@@ -630,6 +640,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.config_cli import add_config_subparser
     add_config_subparser(subparsers)
 
+    # data 子命令组（U-10）
+    from agent_core.data_cli import add_data_subparser
+    add_data_subparser(subparsers)
+
     return parser
 
 
@@ -663,6 +677,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "plugin": _cmd_plugin,
         "log-rotate": _cmd_log_rotate,
         "config": _cmd_config,
+        "data": _cmd_data,
     }
 
     handler = handlers.get(args.command)

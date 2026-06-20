@@ -49,3 +49,8 @@ data/
 # Patches and temp status
 *.patch
 long_run_status.json
+
+# Runtime databases and logs (test artifacts)
+*.db
+logs/
+
