@@ -396,6 +396,13 @@ async def _cmd_plugin(args: argparse.Namespace) -> int:
     return await handle_plugin_async(args)
 
 
+async def _cmd_log_rotate(args: argparse.Namespace) -> int:
+    """日志轮转管理。"""
+    from agent_core.log_rotate_cli import handle_log_rotate
+
+    return handle_log_rotate(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -423,6 +430,10 @@ def _build_parser() -> argparse.ArgumentParser:
   agent plugin load -f plug.py -c MyPlugin  # 加载验证插件
   agent plugin info -f plug.py -c MyPlugin  # 查看插件信息
   agent plugin health -f plug.py -c MyPlugin # 插件健康检查
+  agent log-rotate status             # 查看日志轮转状态
+  agent log-rotate rotate             # 手动触发轮转
+  agent log-rotate rotate --force     # 强制轮转
+  agent log-rotate archives           # 列出归档文件
 """,
     )
 
@@ -533,6 +544,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.plugin_cli import add_plugin_subparser
     add_plugin_subparser(subparsers)
 
+    # log-rotate 子命令组（U-8）
+    from agent_core.log_rotate_cli import add_log_rotate_subparser
+    add_log_rotate_subparser(subparsers)
+
     return parser
 
 
@@ -564,6 +579,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "init": _cmd_init,
         "logs": _cmd_logs,
         "plugin": _cmd_plugin,
+        "log-rotate": _cmd_log_rotate,
     }
 
     handler = handlers.get(args.command)

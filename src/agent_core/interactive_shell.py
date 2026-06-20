@@ -359,6 +359,38 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    # === 日志轮转命令（U-8）===
+
+    def do_log_rotate(self, arg: str) -> None:
+        """
+        日志轮转管理（状态/轮转/归档）。
+
+        用法:
+          log-rotate                          # 查看轮转状态
+          log-rotate status                   # 查看轮转状态
+          log-rotate rotate                   # 手动触发轮转
+          log-rotate rotate --force           # 强制轮转
+          log-rotate archives                 # 列出归档文件
+
+        选项:
+          -f, --file <path>       日志文件路径
+          --max-bytes <N>         最大字节数
+          --backup-count <N>      备份数量
+          --force                 强制轮转
+        """
+        from agent_core.log_rotate_cli import handle_log_rotate
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["log-rotate"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_log_rotate(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -399,6 +431,9 @@ class AgentShell(cmd.Cmd):
             print()
             print(_c("Plugins:", _COLOR_CYAN))
             print("  plugin    - List/load/validate plugins")
+            print()
+            print(_c("Log Rotation:", _COLOR_CYAN))
+            print("  log-rotate - Manage log rotation")
             print()
             print(_c("System:", _COLOR_CYAN))
             print("  port      - Set dashboard port")
