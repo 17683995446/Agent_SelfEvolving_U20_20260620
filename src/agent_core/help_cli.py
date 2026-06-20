@@ -216,6 +216,19 @@ COMMAND_METADATA: Dict[str, Dict[str, Any]] = {
             "agent history clear             # 清除历史",
         ],
     },
+    "template": {
+        "category": "Configuration",
+        "summary": "配置模板管理",
+        "description": "管理配置模板，支持内置模板（minimal/standard/high-performance/debug）和用户自定义模板。模板可复用、可分享。",
+        "examples": [
+            "agent template list             # 列出所有模板",
+            "agent template show standard    # 查看模板详情",
+            "agent template apply standard   # 应用模板生成配置",
+            "agent template apply standard --env prod  # 指定环境",
+            "agent template save mytmpl config.yaml    # 保存配置为模板",
+            "agent template delete mytmpl    # 删除用户模板",
+        ],
+    },
 }
 
 # 分类显示顺序

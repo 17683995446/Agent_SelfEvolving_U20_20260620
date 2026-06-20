@@ -452,7 +452,7 @@ class TestCLIIntegration(unittest.TestCase):
         expected = {"start", "status", "health", "dashboard", "version",
                     "shell", "init", "logs", "plugin", "log-rotate",
                     "config", "data", "help", "wizard", "alias", "overview",
-                    "history"}
+                    "history", "template"}
         self.assertEqual(set(all_cmds), expected)
 
 

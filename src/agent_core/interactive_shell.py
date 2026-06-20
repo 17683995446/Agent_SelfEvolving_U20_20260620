@@ -532,6 +532,32 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    def do_template(self, arg: str) -> None:
+        """
+        配置模板管理（U-17）。
+
+        用法:
+          template                    # 列出所有模板
+          template list               # 列出所有模板
+          template show <name>        # 查看模板详情
+          template apply <name>       # 应用模板生成配置
+          template apply <name> --env prod  # 指定环境
+          template save <name> <file> # 保存配置为模板
+          template delete <name>      # 删除用户模板
+        """
+        from agent_core.template_cli import handle_template
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["template"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_template(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -579,6 +605,7 @@ class AgentShell(cmd.Cmd):
             print(_c("Config:", _COLOR_CYAN))
             print("  config-diff - Compare/show/validate config")
             print("  wizard    - Interactive onboarding wizard")
+            print("  template  - Manage config templates")
             print()
             print(_c("Data:", _COLOR_CYAN))
             print("  data      - Export/import/stats data")
@@ -618,7 +645,8 @@ class AgentShell(cmd.Cmd):
         shell_commands = [
             "status", "metrics", "health", "config", "profile",
             "errors", "port", "history", "logs", "plugin",
-            "log-rotate", "config-diff", "data", "exit", "quit", "help",
+            "log-rotate", "config-diff", "data", "wizard", "alias",
+            "overview", "template", "exit", "quit", "help",
         ]
 
         print(_c(f"[ERROR] Unknown command: {cmd_name}", _COLOR_RED))

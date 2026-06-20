@@ -515,6 +515,13 @@ async def _cmd_history(args: argparse.Namespace) -> int:
     return handle_history(args)
 
 
+async def _cmd_template(args: argparse.Namespace) -> int:
+    """配置模板管理。"""
+    from agent_core.template_cli import handle_template
+
+    return handle_template(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -713,6 +720,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.history_cli import add_history_subparser
     add_history_subparser(subparsers)
 
+    # template 子命令（U-17）
+    from agent_core.template_cli import add_template_subparser
+    add_template_subparser(subparsers)
+
     return parser
 
 
@@ -735,7 +746,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         known_commands = {
             "start", "status", "health", "dashboard", "version", "shell",
             "init", "logs", "plugin", "log-rotate", "config", "data",
-            "help", "wizard", "alias", "overview", "history",
+            "help", "wizard", "alias", "overview", "history", "template",
             "--help", "-h",
         }
         if argv[0] not in known_commands:
@@ -770,6 +781,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "alias": _cmd_alias,
         "overview": _cmd_overview,
         "history": _cmd_history,
+        "template": _cmd_template,
     }
 
     handler = handlers.get(args.command)
