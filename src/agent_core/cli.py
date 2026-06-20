@@ -361,6 +361,13 @@ async def _cmd_version(args: argparse.Namespace) -> int:
     return 0
 
 
+async def _cmd_shell(args: argparse.Namespace) -> int:
+    """启动交互式Shell。"""
+    from agent_core.interactive_shell import run_shell
+
+    return run_shell(port=args.port, script=args.script)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -375,6 +382,8 @@ def _build_parser() -> argparse.ArgumentParser:
   agent status                   # 查询运行状态
   agent health                   # 健康检查
   agent dashboard --port 9090    # 启动Dashboard
+  agent shell                    # 交互式Shell
+  agent shell --script cmds.txt  # 批量执行命令
   agent version                  # 显示版本
 """,
     )
@@ -443,6 +452,19 @@ def _build_parser() -> argparse.ArgumentParser:
         "version", help="显示版本信息"
     )
 
+    # shell 子命令
+    shell_parser = subparsers.add_parser(
+        "shell", help="启动交互式Shell"
+    )
+    shell_parser.add_argument(
+        "--port", type=int, default=_DEFAULT_DASHBOARD_PORT,
+        help=f"Dashboard端口 (默认: {_DEFAULT_DASHBOARD_PORT})"
+    )
+    shell_parser.add_argument(
+        "--script", default=None,
+        help="脚本文件路径（批量执行命令）"
+    )
+
     return parser
 
 
@@ -470,6 +492,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "health": _cmd_health,
         "dashboard": _cmd_dashboard,
         "version": _cmd_version,
+        "shell": _cmd_shell,
     }
 
     handler = handlers.get(args.command)
