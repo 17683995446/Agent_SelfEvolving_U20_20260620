@@ -368,6 +368,20 @@ async def _cmd_shell(args: argparse.Namespace) -> int:
     return run_shell(port=args.port, script=args.script)
 
 
+async def _cmd_init(args: argparse.Namespace) -> int:
+    """生成项目脚手架。"""
+    from agent_core.project_scaffolder import scaffold_project
+
+    interactive = not args.yes
+    success = scaffold_project(
+        project_dir=args.directory,
+        app_name=args.name,
+        env=args.env,
+        interactive=interactive,
+    )
+    return 0 if success else 1
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -376,15 +390,15 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  agent start                    # 使用默认配置启动
-  agent start --env prod         # 使用生产环境配置启动
-  agent start --config my.yaml   # 使用指定配置启动
-  agent status                   # 查询运行状态
-  agent health                   # 健康检查
-  agent dashboard --port 9090    # 启动Dashboard
-  agent shell                    # 交互式Shell
-  agent shell --script cmds.txt  # 批量执行命令
-  agent version                  # 显示版本
+  agent init myproject              # 生成项目脚手架
+  agent init myproject --name myapp # 指定应用名称
+  agent init myproject --yes        # 跳过交互确认
+  agent start                       # 使用默认配置启动
+  agent start --env prod            # 使用生产环境配置启动
+  agent status                      # 查询运行状态
+  agent health                      # 健康检查
+  agent shell                       # 交互式Shell
+  agent version                     # 显示版本
 """,
     )
 
@@ -465,6 +479,28 @@ def _build_parser() -> argparse.ArgumentParser:
         help="脚本文件路径（批量执行命令）"
     )
 
+    # init 子命令
+    init_parser = subparsers.add_parser(
+        "init", help="生成项目脚手架"
+    )
+    init_parser.add_argument(
+        "directory", nargs="?", default=".",
+        help="项目目录 (默认: 当前目录)"
+    )
+    init_parser.add_argument(
+        "--name", default="my_agent",
+        help="应用名称 (默认: my_agent)"
+    )
+    init_parser.add_argument(
+        "--env", default="dev",
+        choices=["dev", "prod", "test"],
+        help="默认环境 (默认: dev)"
+    )
+    init_parser.add_argument(
+        "--yes", "-y", action="store_true",
+        help="跳过交互式确认"
+    )
+
     return parser
 
 
@@ -493,6 +529,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "dashboard": _cmd_dashboard,
         "version": _cmd_version,
         "shell": _cmd_shell,
+        "init": _cmd_init,
     }
 
     handler = handlers.get(args.command)
