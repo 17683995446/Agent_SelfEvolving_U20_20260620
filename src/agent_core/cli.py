@@ -389,6 +389,13 @@ async def _cmd_logs(args: argparse.Namespace) -> int:
     return handle_logs(args)
 
 
+async def _cmd_plugin(args: argparse.Namespace) -> int:
+    """插件管理。"""
+    from agent_core.plugin_cli import handle_plugin_async
+
+    return await handle_plugin_async(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -412,6 +419,10 @@ def _build_parser() -> argparse.ArgumentParser:
   agent logs analyze                # 智能分析日志
   agent logs grep "error" -i        # 搜索关键词（忽略大小写）
   agent logs tail                   # 实时跟踪日志
+  agent plugin list                 # 列出可用插件
+  agent plugin load -f plug.py -c MyPlugin  # 加载验证插件
+  agent plugin info -f plug.py -c MyPlugin  # 查看插件信息
+  agent plugin health -f plug.py -c MyPlugin # 插件健康检查
 """,
     )
 
@@ -518,6 +529,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.logs_cli import add_logs_subparser
     add_logs_subparser(subparsers)
 
+    # plugin 子命令组（U-7）
+    from agent_core.plugin_cli import add_plugin_subparser
+    add_plugin_subparser(subparsers)
+
     return parser
 
 
@@ -548,6 +563,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "shell": _cmd_shell,
         "init": _cmd_init,
         "logs": _cmd_logs,
+        "plugin": _cmd_plugin,
     }
 
     handler = handlers.get(args.command)

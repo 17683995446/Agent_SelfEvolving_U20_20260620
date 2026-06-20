@@ -326,6 +326,39 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    # === 插件命令（U-7）===
+
+    def do_plugin(self, arg: str) -> None:
+        """
+        插件管理（列出/加载/验证/健康检查）。
+
+        用法:
+          plugin                              # 列出可用插件
+          plugin list                         # 列出可用插件
+          plugin list --dir ./my_plugins      # 指定插件目录
+          plugin load -f <file> -c <Class>    # 加载并验证插件
+          plugin info -f <file> -c <Class>    # 查看插件信息
+          plugin health -f <file> -c <Class>  # 插件健康检查
+
+        选项:
+          -f, --file <path>     插件文件路径
+          -c, --class <name>    插件类名
+          --config <json>       初始化配置（JSON字符串）
+          -d, --dir <path>      插件目录（list命令）
+        """
+        from agent_core.plugin_cli import handle_plugin
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["plugin"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_plugin(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -363,6 +396,9 @@ class AgentShell(cmd.Cmd):
             print()
             print(_c("Logs:", _COLOR_CYAN))
             print("  logs      - View/analyze/search logs")
+            print()
+            print(_c("Plugins:", _COLOR_CYAN))
+            print("  plugin    - List/load/validate plugins")
             print()
             print(_c("System:", _COLOR_CYAN))
             print("  port      - Set dashboard port")
