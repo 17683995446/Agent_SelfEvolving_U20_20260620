@@ -546,8 +546,22 @@ def _build_parser() -> argparse.ArgumentParser:
   agent data export                   # 导出经验数据为JSON
   agent data import <file>            # 导入经验数据
   agent data stats                    # 显示数据统计
+  agent overview                      # 系统概览
+  agent wizard --yes                  # 非交互式配置向导
+  agent alias list                    # 列出命令别名
+  agent help start                    # 查看start命令详情
+
+全局选项:
+  --format text|json|table            # 输出格式
+  --no-color                          # 禁用颜色（无障碍）
+  --quiet, -q                         # 静默模式
+  --verbose, -V                       # 详细模式
 """,
     )
+
+    # 全局格式化参数（U-15）
+    from agent_core.output_formatter import add_global_format_args
+    add_global_format_args(parser)
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 

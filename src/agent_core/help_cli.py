@@ -364,6 +364,12 @@ def _show_category_help() -> int:
     print(f"  {_colorize('agent help <command>', _COLOR_DIM)}  Show detailed help for a command")
     print(f"  {_colorize('agent <command> --help', _COLOR_DIM)}  Show command options")
     print(f"  {_colorize('agent shell', _COLOR_DIM)}  Enter interactive shell")
+    print()
+    print(_colorize("Global Options:", _COLOR_CYAN))
+    print(f"  {_colorize('--format text|json|table', _COLOR_DIM)}  Output format")
+    print(f"  {_colorize('--no-color', _COLOR_DIM)}  Disable colors (accessibility)")
+    print(f"  {_colorize('--quiet, -q', _COLOR_DIM)}  Quiet mode (errors only)")
+    print(f"  {_colorize('--verbose, -V', _COLOR_DIM)}  Verbose mode (debug info)")
     return 0
 
 
