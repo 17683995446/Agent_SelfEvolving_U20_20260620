@@ -531,6 +531,33 @@ class AgentShell(cmd.Cmd):
         """空行不重复上一条命令。"""
         pass
 
+    def default(self, line: str) -> None:
+        """
+        未知命令处理：提供建议（U-11）。
+
+        当用户输入的命令没有对应的do_方法时，
+        基于相似度建议最接近的命令。
+        """
+        from agent_core.help_cli import suggest_command, format_suggestions
+
+        # 提取命令名（第一个词）
+        cmd_name = line.strip().split()[0] if line.strip() else ""
+
+        # Shell可用命令列表
+        shell_commands = [
+            "status", "metrics", "health", "config", "profile",
+            "errors", "port", "history", "logs", "plugin",
+            "log-rotate", "config-diff", "data", "exit", "quit", "help",
+        ]
+
+        print(_c(f"[ERROR] Unknown command: {cmd_name}", _COLOR_RED))
+
+        suggestions = suggest_command(cmd_name, shell_commands)
+        suggestion_text = format_suggestions(suggestions)
+        if suggestion_text:
+            print(f"  {suggestion_text}")
+        print(_c("  Type 'help' to see all available commands.", _COLOR_YELLOW))
+
     def _complete_command(self, text: str, commands: List[str]) -> List[str]:
         """命令补全辅助。"""
         if not text:

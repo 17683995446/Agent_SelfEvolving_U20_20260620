@@ -480,6 +480,13 @@ async def _cmd_data(args: argparse.Namespace) -> int:
     return handle_data(args)
 
 
+async def _cmd_help(args: argparse.Namespace) -> int:
+    """显示帮助信息。"""
+    from agent_core.help_cli import cmd_help
+
+    return cmd_help(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -644,6 +651,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.data_cli import add_data_subparser
     add_data_subparser(subparsers)
 
+    # help 子命令（U-11）
+    from agent_core.help_cli import add_help_subparser
+    add_help_subparser(subparsers)
+
     return parser
 
 
@@ -661,8 +672,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command is None:
-        parser.print_help()
-        return 0
+        # 无命令时显示分类帮助（U-11增强）
+        from agent_core.help_cli import cmd_help
+        help_args = argparse.Namespace(command_name=None)
+        return cmd_help(help_args)
 
     # 分发到子命令
     handlers = {
@@ -678,12 +691,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         "log-rotate": _cmd_log_rotate,
         "config": _cmd_config,
         "data": _cmd_data,
+        "help": _cmd_help,
     }
 
     handler = handlers.get(args.command)
     if handler is None:
-        _print_error(f"Unknown command: {args.command}")
-        return 1
+        # 未知命令：提供建议（U-11）
+        from agent_core.help_cli import handle_unknown_command
+        return handle_unknown_command(args.command, list(handlers.keys()))
 
     try:
         return asyncio.run(handler(args))
