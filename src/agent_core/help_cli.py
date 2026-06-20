@@ -193,6 +193,16 @@ COMMAND_METADATA: Dict[str, Dict[str, Any]] = {
             "agent alias clear               # 清除所有用户别名",
         ],
     },
+    "overview": {
+        "category": "System",
+        "summary": "系统概览（一键查看全貌）",
+        "description": "聚合显示系统全貌：配置状态、日志摘要、数据统计、插件信息、运行状态。支持text/json格式。",
+        "examples": [
+            "agent overview                  # 文本格式概览",
+            "agent overview --format json    # JSON格式概览",
+            "agent overview --env prod       # 指定环境",
+        ],
+    },
 }
 
 # 分类显示顺序

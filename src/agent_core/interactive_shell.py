@@ -510,6 +510,28 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    def do_overview(self, arg: str) -> None:
+        """
+        系统概览（U-14）。
+
+        用法:
+          overview                    # 文本格式概览
+          overview --format json      # JSON格式
+          overview --env prod         # 指定环境
+        """
+        from agent_core.overview_cli import handle_overview
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["overview"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_overview(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -565,6 +587,7 @@ class AgentShell(cmd.Cmd):
             print("  port      - Set dashboard port")
             print("  history   - Show command history")
             print("  alias     - Manage command aliases")
+            print("  overview  - System overview")
             print("  exit      - Quit shell")
             print()
             print(_c("Type 'help <command>' for detailed help.", _COLOR_YELLOW))

@@ -501,6 +501,13 @@ async def _cmd_alias(args: argparse.Namespace) -> int:
     return handle_alias(args)
 
 
+async def _cmd_overview(args: argparse.Namespace) -> int:
+    """系统概览。"""
+    from agent_core.overview_cli import handle_overview
+
+    return handle_overview(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -677,6 +684,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.alias_cli import add_alias_subparser
     add_alias_subparser(subparsers)
 
+    # overview 子命令（U-14）
+    from agent_core.overview_cli import add_overview_subparser
+    add_overview_subparser(subparsers)
+
     return parser
 
 
@@ -699,7 +710,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         known_commands = {
             "start", "status", "health", "dashboard", "version", "shell",
             "init", "logs", "plugin", "log-rotate", "config", "data",
-            "help", "wizard", "alias", "--help", "-h",
+            "help", "wizard", "alias", "overview", "--help", "-h",
         }
         if argv[0] not in known_commands:
             manager = AliasManager()
@@ -731,6 +742,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "help": _cmd_help,
         "wizard": _cmd_wizard,
         "alias": _cmd_alias,
+        "overview": _cmd_overview,
     }
 
     handler = handlers.get(args.command)
