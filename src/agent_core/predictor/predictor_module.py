@@ -171,6 +171,29 @@ class MultiLayerPredictor(IMultiLayerPredictor):
             },
         }
 
+    # C-9: 漂移检测统计与置信区间
+    def get_drift_stats(self) -> Dict[str, Any]:
+        """获取各层漂移检测统计。"""
+        if not self._initialized:
+            return {}
+        return {
+            "low": self._low_predictor.get_drift_stats(),
+            "mid": self._mid_predictor.get_drift_stats(),
+            "high": self._high_predictor.get_drift_stats(),
+        }
+
+    def get_confidence_interval(self) -> Tuple[float, float]:
+        """C-9: 获取集成预测置信区间。"""
+        if not self._initialized or self._ensemble is None:
+            return 0.0, 0.0
+        return self._ensemble.get_confidence_interval()
+
+    def get_layer_weights(self) -> Dict[str, float]:
+        """C-9: 获取当前各层归一化权重。"""
+        if not self._initialized or self._ensemble is None:
+            return {"low": 1 / 3, "mid": 1 / 3, "high": 1 / 3}
+        return self._ensemble.get_layer_weights()
+
     def swap_layer(self, layer: str, new_predictor: IPredictionModel) -> bool:
         """
         在线替换指定层级预测器。
