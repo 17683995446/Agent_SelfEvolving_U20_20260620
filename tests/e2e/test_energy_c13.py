@@ -309,10 +309,10 @@ class TestModuleHibernator(unittest.TestCase):
         """touch更新活跃时间。"""
         mh = ModuleHibernator()
         mh.register("mod")
-        idle_before = mh.get_idle_time("mod")
-        time.sleep(0.05)
-        mh.touch("mod")
-        idle_after = mh.get_idle_time("mod")
+        time.sleep(0.05)  # 让idle变大
+        idle_before = mh.get_idle_time("mod")  # 此时idle较大
+        mh.touch("mod")  # 重置last_active
+        idle_after = mh.get_idle_time("mod")  # 此时idle很小
         self.assertLess(idle_after, idle_before)
 
     def test_light_sleep_after_threshold(self):
