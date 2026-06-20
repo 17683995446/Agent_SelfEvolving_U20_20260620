@@ -391,6 +391,47 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    # === 配置命令（U-9）===
+
+    def do_config_diff(self, arg: str) -> None:
+        """
+        配置管理（diff/show/validate）。
+
+        用法:
+          config-diff -a <fileA> -b <fileB>   # 比较两个配置文件
+          config show                          # 显示生效配置
+          config validate                      # 验证配置
+
+        选项:
+          -a, --file-a <path>    配置文件A
+          -b, --file-b <path>    配置文件B
+          --env <env>            环境（show/validate）
+          --config <path>        配置文件路径（show/validate）
+        """
+        from agent_core.config_cli import handle_config
+        from agent_core.cli import _build_parser
+
+        # 支持 config-diff 作为快捷方式
+        if arg and not arg.startswith("-"):
+            # 如果第一个参数不是选项，当作 diff 子命令
+            parts = arg.split(None, 1)
+            if parts[0] in ("diff", "show", "validate"):
+                full_arg = arg
+            else:
+                full_arg = f"diff {arg}"
+        else:
+            full_arg = f"diff {arg}" if arg else ""
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["config"] + full_arg.split())
+        except SystemExit:
+            return
+
+        result = handle_config(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -434,6 +475,9 @@ class AgentShell(cmd.Cmd):
             print()
             print(_c("Log Rotation:", _COLOR_CYAN))
             print("  log-rotate - Manage log rotation")
+            print()
+            print(_c("Config:", _COLOR_CYAN))
+            print("  config-diff - Compare/show/validate config")
             print()
             print(_c("System:", _COLOR_CYAN))
             print("  port      - Set dashboard port")

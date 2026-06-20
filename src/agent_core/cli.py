@@ -175,6 +175,65 @@ def _get_default_config() -> Dict[str, Any]:
     }
 
 
+def _do_dry_run(config: Dict[str, Any], env: str) -> int:
+    """
+    Dry-run模式：验证配置但不启动Agent。
+
+    Args:
+        config: 配置字典。
+        env: 环境名。
+
+    Returns:
+        退出码（0成功，非0失败）。
+    """
+    from agent_core.common.config_validator import ConfigValidator
+
+    print(_colorize("=== Dry Run (Configuration Validation) ===", _COLOR_BOLD))
+    print(f"  Environment: {env}")
+    print()
+
+    # 验证配置
+    validator = ConfigValidator()
+    ok, errors = validator.validate(config)
+
+    if not ok:
+        _print_error(f"Configuration validation failed ({len(errors)} errors)")
+        for err in errors:
+            _print_error(f"  {err}")
+        return 1
+
+    _print_success("Configuration is valid")
+    print()
+
+    # 显示关键配置摘要
+    print(_colorize("--- Key Parameters ---", _COLOR_CYAN))
+    key_items = [
+        ("app_name", "App Name"),
+        ("log_level", "Log Level"),
+        ("online_interval_seconds", "Online Interval"),
+        ("offline_interval_seconds", "Offline Interval"),
+        ("memory_capacity", "Memory Capacity"),
+        ("exploration_rate", "Exploration Rate"),
+        ("epsilon", "Epsilon"),
+        ("interrupt_threshold", "Interrupt Threshold"),
+    ]
+    for key, label in key_items:
+        if key in config:
+            print(f"  {label:<20}: {config[key]}")
+
+    print()
+    print(_colorize("--- What Would Happen ---", _COLOR_CYAN))
+    print(f"  1. Initialize Agent with {len(config)} config items")
+    print(f"  2. Start online loop every {config.get('online_interval_seconds', '?')}s")
+    print(f"  3. Start offline loop every {config.get('offline_interval_seconds', '?')}s")
+    print(f"  4. Dashboard at http://127.0.0.1:{_DEFAULT_DASHBOARD_PORT}")
+    print()
+    _print_success("Dry run completed. Agent would start successfully.")
+    _print_info("Remove --dry-run to actually start the Agent.")
+
+    return 0
+
+
 async def _cmd_start(args: argparse.Namespace) -> int:
     """启动Agent。"""
     from agent_core.memory.agent_main import SelfEvolvingAgent
@@ -188,6 +247,10 @@ async def _cmd_start(args: argparse.Namespace) -> int:
         config["online_interval_seconds"] = args.online_interval
     if args.offline_interval:
         config["offline_interval_seconds"] = args.offline_interval
+
+    # dry-run模式：验证配置但不启动（U-9）
+    if getattr(args, "dry_run", False):
+        return _do_dry_run(config, args.env)
 
     _print_info(
         f"Starting Agent (env={args.env}, "
@@ -403,6 +466,13 @@ async def _cmd_log_rotate(args: argparse.Namespace) -> int:
     return handle_log_rotate(args)
 
 
+async def _cmd_config(args: argparse.Namespace) -> int:
+    """配置管理。"""
+    from agent_core.config_cli import handle_config
+
+    return handle_config(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -434,6 +504,10 @@ def _build_parser() -> argparse.ArgumentParser:
   agent log-rotate rotate             # 手动触发轮转
   agent log-rotate rotate --force     # 强制轮转
   agent log-rotate archives           # 列出归档文件
+  agent config diff -a base.yaml -b prod.yaml  # 比较配置差异
+  agent config show                   # 显示生效配置
+  agent config validate               # 验证配置
+  agent start --dry-run               # 验证配置但不启动
 """,
     )
 
@@ -463,6 +537,10 @@ def _build_parser() -> argparse.ArgumentParser:
     start_parser.add_argument(
         "--offline-interval", type=float, default=None,
         help="离线循环间隔(秒)"
+    )
+    start_parser.add_argument(
+        "--dry-run", action="store_true",
+        help="验证配置但不启动Agent（U-9）"
     )
 
     # status 子命令
@@ -548,6 +626,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.log_rotate_cli import add_log_rotate_subparser
     add_log_rotate_subparser(subparsers)
 
+    # config 子命令组（U-9）
+    from agent_core.config_cli import add_config_subparser
+    add_config_subparser(subparsers)
+
     return parser
 
 
@@ -580,6 +662,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "logs": _cmd_logs,
         "plugin": _cmd_plugin,
         "log-rotate": _cmd_log_rotate,
+        "config": _cmd_config,
     }
 
     handler = handlers.get(args.command)
