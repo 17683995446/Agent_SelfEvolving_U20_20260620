@@ -102,9 +102,9 @@ class AlertEngine:
         if not isinstance(value, (int, float)):
             return "warning"
         ratio = abs(value - rule.threshold) / max(abs(rule.threshold), 1e-6)
-        if ratio > 0.5:
+        if ratio >= 0.5:
             return "critical"
-        if ratio > 0.2:
+        if ratio >= 0.2:
             return "warning"
         return "info"
 
