@@ -4,59 +4,48 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
+dist/
+build/
+.eggs/
 
 # Virtual environments
 venv/
 env/
-ENV/
 .venv/
 
-# Testing / coverage
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-
 # IDE
-.idea/
 .vscode/
+.idea/
 *.swp
 *.swo
-*~
-.DS_Store
 
-# Project specific
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
-agent_memory.db
+# Data and logs
+data/logs/
+data/models/
 *.log
-tmp/
-temp/
-*.tmp
-logs/
+*.bak
+*.backup
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Generated files (keep directory structure)
+generated/*.py
+!generated/__init__.py
+
+# Config with secrets
+.env
+*.secret
+data/
 *.out
-nohup.out
+
+# Patches and temp status
+*.patch
+long_run_status.json
