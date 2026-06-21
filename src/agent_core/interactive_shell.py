@@ -583,6 +583,29 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    def do_env(self, arg: str) -> None:
+        """
+        环境变量配置管理（U-19）。
+
+        用法:
+          env                    # 显示环境变量配置
+          env show               # 显示环境变量配置
+          env list               # 列出所有支持的环境变量
+          env validate           # 验证环境变量配置
+        """
+        from agent_core.env_config_cli import handle_env
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["env"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_env(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -631,6 +654,7 @@ class AgentShell(cmd.Cmd):
             print("  config-diff - Compare/show/validate config")
             print("  wizard    - Interactive onboarding wizard")
             print("  template  - Manage config templates")
+            print("  env       - Environment variable config")
             print()
             print(_c("Data:", _COLOR_CYAN))
             print("  data      - Export/import/stats data")
@@ -672,7 +696,7 @@ class AgentShell(cmd.Cmd):
             "status", "metrics", "health", "config", "profile",
             "errors", "port", "history", "logs", "plugin",
             "log-rotate", "config-diff", "data", "wizard", "alias",
-            "overview", "template", "batch", "exit", "quit", "help",
+            "overview", "template", "batch", "env", "exit", "quit", "help",
         ]
 
         print(_c(f"[ERROR] Unknown command: {cmd_name}", _COLOR_RED))

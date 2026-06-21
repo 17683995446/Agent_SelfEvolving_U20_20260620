@@ -529,6 +529,13 @@ async def _cmd_batch(args: argparse.Namespace) -> int:
     return handle_batch(args)
 
 
+async def _cmd_env(args: argparse.Namespace) -> int:
+    """环境变量配置管理。"""
+    from agent_core.env_config_cli import handle_env
+
+    return handle_env(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -735,6 +742,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.batch_cli import add_batch_subparser
     add_batch_subparser(subparsers)
 
+    # env 子命令（U-19）
+    from agent_core.env_config_cli import add_env_subparser
+    add_env_subparser(subparsers)
+
     return parser
 
 
@@ -758,7 +769,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             "start", "status", "health", "dashboard", "version", "shell",
             "init", "logs", "plugin", "log-rotate", "config", "data",
             "help", "wizard", "alias", "overview", "history", "template",
-            "batch",
+            "batch", "env",
             "--help", "-h",
         }
         if argv[0] not in known_commands:
@@ -795,6 +806,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "history": _cmd_history,
         "template": _cmd_template,
         "batch": _cmd_batch,
+        "env": _cmd_env,
     }
 
     handler = handlers.get(args.command)

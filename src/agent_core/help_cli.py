@@ -241,6 +241,17 @@ COMMAND_METADATA: Dict[str, Dict[str, Any]] = {
             "agent batch preview -f cmds.txt # 预览（不执行）",
         ],
     },
+    "env": {
+        "category": "Configuration",
+        "summary": "环境变量配置管理",
+        "description": "管理AGENT_*环境变量配置。优先级：CLI参数 > 环境变量 > 配置文件 > 默认值。支持show/list/validate。",
+        "examples": [
+            "agent env                       # 显示环境变量配置",
+            "agent env show                  # 显示环境变量配置",
+            "agent env list                  # 列出所有支持的环境变量",
+            "agent env validate              # 验证环境变量配置",
+        ],
+    },
 }
 
 # 分类显示顺序
