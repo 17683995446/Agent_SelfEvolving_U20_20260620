@@ -229,6 +229,18 @@ COMMAND_METADATA: Dict[str, Dict[str, Any]] = {
             "agent template delete mytmpl    # 删除用户模板",
         ],
     },
+    "batch": {
+        "category": "System",
+        "summary": "批量执行命令（支持&&/||/;/|）",
+        "description": "批量执行多个命令，支持条件执行（&&/||）、顺序执行（;）、管道（|）和文件加载。适合自动化脚本。",
+        "examples": [
+            "agent batch -f cmds.txt         # 从文件批量执行",
+            "agent batch -c 'version\\nstatus'  # 内联命令",
+            "agent batch run -f cmds.txt --dry-run  # 预览",
+            "agent batch run -f cmds.txt --continue-on-error  # 出错继续",
+            "agent batch preview -f cmds.txt # 预览（不执行）",
+        ],
+    },
 }
 
 # 分类显示顺序

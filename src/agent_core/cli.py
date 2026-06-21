@@ -522,6 +522,13 @@ async def _cmd_template(args: argparse.Namespace) -> int:
     return handle_template(args)
 
 
+async def _cmd_batch(args: argparse.Namespace) -> int:
+    """批量执行命令。"""
+    from agent_core.batch_cli import handle_batch
+
+    return handle_batch(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -724,6 +731,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.template_cli import add_template_subparser
     add_template_subparser(subparsers)
 
+    # batch 子命令（U-18）
+    from agent_core.batch_cli import add_batch_subparser
+    add_batch_subparser(subparsers)
+
     return parser
 
 
@@ -747,6 +758,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             "start", "status", "health", "dashboard", "version", "shell",
             "init", "logs", "plugin", "log-rotate", "config", "data",
             "help", "wizard", "alias", "overview", "history", "template",
+            "batch",
             "--help", "-h",
         }
         if argv[0] not in known_commands:
@@ -782,6 +794,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "overview": _cmd_overview,
         "history": _cmd_history,
         "template": _cmd_template,
+        "batch": _cmd_batch,
     }
 
     handler = handlers.get(args.command)

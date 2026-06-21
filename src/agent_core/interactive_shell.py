@@ -558,6 +558,31 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    def do_batch(self, arg: str) -> None:
+        """
+        批量执行命令（U-18）。
+
+        用法:
+          batch -f <file>             # 从文件批量执行
+          batch -c 'cmd1\\ncmd2'      # 内联命令
+          batch run -f cmds.txt       # 执行
+          batch preview -f cmds.txt   # 预览
+          batch -f cmds.txt --dry-run # 预览
+          batch -f cmds.txt --continue-on-error  # 出错继续
+        """
+        from agent_core.batch_cli import handle_batch
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["batch"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_batch(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。
@@ -615,6 +640,7 @@ class AgentShell(cmd.Cmd):
             print("  history   - Show command history")
             print("  alias     - Manage command aliases")
             print("  overview  - System overview")
+            print("  batch     - Batch execute commands")
             print("  exit      - Quit shell")
             print()
             print(_c("Type 'help <command>' for detailed help.", _COLOR_YELLOW))
@@ -646,7 +672,7 @@ class AgentShell(cmd.Cmd):
             "status", "metrics", "health", "config", "profile",
             "errors", "port", "history", "logs", "plugin",
             "log-rotate", "config-diff", "data", "wizard", "alias",
-            "overview", "template", "exit", "quit", "help",
+            "overview", "template", "batch", "exit", "quit", "help",
         ]
 
         print(_c(f"[ERROR] Unknown command: {cmd_name}", _COLOR_RED))
