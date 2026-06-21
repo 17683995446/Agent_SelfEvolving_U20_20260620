@@ -606,6 +606,29 @@ class AgentShell(cmd.Cmd):
         if result != 0:
             print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
 
+    def do_retry(self, arg: str) -> None:
+        """
+        错误恢复与自动重试（U-20）。
+
+        用法:
+          retry run version      # 重试执行version命令
+          retry run status --max-retries 5  # 自定义重试次数
+          retry status           # 查看重试系统状态
+          retry reset            # 重置熔断器
+        """
+        from agent_core.retry_cli import handle_retry
+        from agent_core.cli import _build_parser
+
+        parser = _build_parser()
+        try:
+            args = parser.parse_args(["retry"] + arg.split())
+        except SystemExit:
+            return
+
+        result = handle_retry(args)
+        if result != 0:
+            print(_c(f"Command failed (exit code: {result})", _COLOR_RED))
+
     def do_exit(self, arg: str) -> bool:
         """
         退出Shell。

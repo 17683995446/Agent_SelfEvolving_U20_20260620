@@ -54,3 +54,6 @@ long_run_status.json
 *.db
 logs/
 
+# Command history
+.agent_history.json
+

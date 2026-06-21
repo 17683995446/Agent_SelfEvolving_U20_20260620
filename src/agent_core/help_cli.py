@@ -252,6 +252,19 @@ COMMAND_METADATA: Dict[str, Dict[str, Any]] = {
             "agent env validate              # 验证环境变量配置",
         ],
     },
+    "retry": {
+        "category": "System",
+        "summary": "错误恢复与自动重试",
+        "description": "执行命令并在失败时自动重试。支持错误分类（瞬时/永久）、指数退避、随机抖动、熔断器和恢复建议。支持run/status/reset。",
+        "examples": [
+            "agent retry run version         # 重试执行version命令",
+            "agent retry run status --max-retries 5  # 自定义重试次数",
+            "agent retry run version --base-delay 2.0  # 自定义初始延迟",
+            "agent retry run version --no-jitter  # 禁用随机抖动",
+            "agent retry status              # 查看重试系统状态",
+            "agent retry reset               # 重置熔断器",
+        ],
+    },
 }
 
 # 分类显示顺序

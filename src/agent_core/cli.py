@@ -536,6 +536,13 @@ async def _cmd_env(args: argparse.Namespace) -> int:
     return handle_env(args)
 
 
+async def _cmd_retry(args: argparse.Namespace) -> int:
+    """错误恢复与自动重试。"""
+    from agent_core.retry_cli import handle_retry
+
+    return handle_retry(args)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """构建CLI参数解析器。"""
     parser = argparse.ArgumentParser(
@@ -746,6 +753,10 @@ def _build_parser() -> argparse.ArgumentParser:
     from agent_core.env_config_cli import add_env_subparser
     add_env_subparser(subparsers)
 
+    # retry 子命令（U-20）
+    from agent_core.retry_cli import add_retry_subparser
+    add_retry_subparser(subparsers)
+
     return parser
 
 
@@ -769,7 +780,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             "start", "status", "health", "dashboard", "version", "shell",
             "init", "logs", "plugin", "log-rotate", "config", "data",
             "help", "wizard", "alias", "overview", "history", "template",
-            "batch", "env",
+            "batch", "env", "retry",
             "--help", "-h",
         }
         if argv[0] not in known_commands:
@@ -807,6 +818,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "template": _cmd_template,
         "batch": _cmd_batch,
         "env": _cmd_env,
+        "retry": _cmd_retry,
     }
 
     handler = handlers.get(args.command)
